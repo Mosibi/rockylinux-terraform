@@ -18,43 +18,71 @@ variable "cpu" {
   default = 2
 }
 
+variable "vm_count" {
+  type = number
+  default = 1
+}
+
+terraform {
+  required_providers {
+    libvirt = {
+      source = "dmacvicar/libvirt"
+    }
+  }
+}
+
 provider "libvirt" {
   uri = "qemu:///system"
 }
 
 
-resource "libvirt_volume" "qcow_volume" {
-  name = "${var.vm_name}.img"
-  pool = "default"
-  source = "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
-  format = "qcow2"
-}
+###
+# Virtual Machine(s)
+###
 
-data "template_file" "user_data" {
+### BEGIN: Cloud init disk ###
+data "template_file" "cloudinit" {
+  count    = var.vm_count
   template = file("${path.module}/cloud_init.cfg")
 
   vars = {
-   hostname = var.vm_name
-   domain = var.domain
+   hostname = "${var.vm_name}-${count.index + 1}"
+   domain   = var.domain
   }
 }
 
-resource "libvirt_cloudinit_disk" "commoninit" {
-  name           = "commoninit.iso"
-  user_data      = data.template_file.user_data.rendered
-  pool           = "default"
+resource "libvirt_cloudinit_disk" "cloudinit" {
+  count     = var.vm_count
+  name      = "${var.vm_name}-cloudinit-${count.index + 1}.iso"
+  user_data = data.template_file.cloudinit[count.index].rendered
+  pool      = "default"
+}
+### END: Cloud init disk ###
+
+### Libvirt volume
+resource "libvirt_volume" "qcow_volume" {
+  count = var.vm_count
+  name  = "${var.vm_name}-${count.index + 1}.img"
+  pool  = "default"
+  source = "/home/richard/meuk/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+  format = "qcow2"
 }
 
-# Define KVM domain to create
-resource "libvirt_domain" "kvm_domain" {
-  name   = var.vm_name
+### BEGIN: Define Virtual Machine to create
+resource "libvirt_domain" "virtual_machine" {
+  count  = var.vm_count
+  name   = "${var.vm_name}-${count.index + 1}"
   memory = var.memory
   vcpu   = var.cpu
 
-  cloudinit = libvirt_cloudinit_disk.commoninit.id
+  cloudinit = libvirt_cloudinit_disk.cloudinit[count.index].id
+
+  cpu = {
+    mode = "host-passthrough"
+  }
 
   disk {
-    volume_id = libvirt_volume.qcow_volume.id
+    volume_id = libvirt_volume.qcow_volume[count.index].id
   }
 
   console {
@@ -75,7 +103,6 @@ resource "libvirt_domain" "kvm_domain" {
   }
 }
 
-output "ip" {
-  value = libvirt_domain.kvm_domain.network_interface.0.addresses.0
+output "ips" {
+  value = "${libvirt_domain.virtual_machine.*.network_interface.0.addresses.0}"
 }
-
