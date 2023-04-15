@@ -26,7 +26,7 @@ provider "libvirt" {
 resource "libvirt_volume" "qcow_volume" {
   name = "${var.vm_name}.img"
   pool = "default"
-  source = "https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud-Base.latest.x86_64.qcow2"
+  source = "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
   format = "qcow2"
 }
 
