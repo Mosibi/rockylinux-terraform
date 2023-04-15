@@ -5,7 +5,7 @@ Read my [blog post](https://blog.mosibi.nl/all/2020/06/07/terraform-centos8-libv
 
 tl;dr
 
-``lang=shell
+```lang=shell
 terraform init
 terraform plan
 terraform apply --auto-approve --var 'vm_count=4'
