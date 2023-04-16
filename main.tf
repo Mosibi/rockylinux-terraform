@@ -64,7 +64,7 @@ resource "libvirt_volume" "qcow_volume" {
   count = var.vm_count
   name  = "${var.vm_name}-${count.index + 1}.img"
   pool  = "default"
-  source = "/home/richard/meuk/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+  source = "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
   format = "qcow2"
 }
 
