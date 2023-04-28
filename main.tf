@@ -18,9 +18,19 @@ variable "cpu" {
   default = 2
 }
 
+variable "disk_size" {
+  type = number
+  default = 10737418240
+}
+
 variable "vm_count" {
   type = number
   default = 1
+}
+
+variable "installation_image" {
+  type = string
+  default = "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
 }
 
 terraform {
@@ -60,12 +70,20 @@ resource "libvirt_cloudinit_disk" "cloudinit" {
 ### END: Cloud init disk ###
 
 ### Libvirt volume
-resource "libvirt_volume" "qcow_volume" {
-  count = var.vm_count
-  name  = "${var.vm_name}-${count.index + 1}.img"
-  pool  = "default"
-  source = "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+resource "libvirt_volume" "cloud_image_disk" {
+  name   = "${var.vm_name}-basedisk.img"
+  pool   = "default"
+  source = var.installation_image
   format = "qcow2"
+}
+
+resource "libvirt_volume" "qcow_volume" {
+  count          = var.vm_count
+  name           = "${var.vm_name}-${count.index + 1}.img"
+  base_volume_id = libvirt_volume.cloud_image_disk.id
+  pool           = "default"
+  size           = var.disk_size
+  format         = "qcow2"
 }
 
 ### BEGIN: Define Virtual Machine to create
